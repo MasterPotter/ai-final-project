@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Olympiad Problem Catalog (2000+)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: { typeset: false }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .math-scroll { overflow-x: auto; overflow-y: hidden; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+    <!-- Navbar -->
+    <nav class="bg-blue-800 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wider mb-2 md:mb-0">🏛️ Elite Math Olympiad Archive</h1>
+            <p class="text-sm text-blue-200">Modern Era Database (2000–Present)</p>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8">
+
+        <!-- Sidebar / Filters -->
+        <aside class="w-full md:w-1/4 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit sticky top-6">
+            <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-700">Filters</h2>
+
+            <!-- Search -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-slate-600">Search</label>
+                <input type="text" id="searchTags" placeholder="Tags, concepts, words..."
+                       class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 bg-slate-50">
+            </div>
+
+            <!-- Competition -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-slate-600">Competition</label>
+                <div class="space-y-2" id="filter-comp">
+                    <label class="flex items-center"><input type="checkbox" value="IMO" class="form-checkbox text-blue-600 mr-2" checked> IMO</label>
+                    <label class="flex items-center"><input type="checkbox" value="USAMO" class="form-checkbox text-blue-600 mr-2" checked> USAMO</label>
+                    <label class="flex items-center"><input type="checkbox" value="USAJMO" class="form-checkbox text-blue-600 mr-2" checked> USAJMO</label>
+                </div>
+            </div>
+
+            <!-- Problem Type -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-slate-600">Problem Type</label>
+                <div class="space-y-2" id="filter-type">
+                    <label class="flex items-center"><input type="checkbox" value="Algebra" class="form-checkbox mr-2" checked> Algebra</label>
+                    <label class="flex items-center"><input type="checkbox" value="Combinatorics" class="form-checkbox mr-2" checked> Combinatorics</label>
+                    <label class="flex items-center"><input type="checkbox" value="Geometry" class="form-checkbox mr-2" checked> Geometry</label>
+                    <label class="flex items-center"><input type="checkbox" value="Number Theory" class="form-checkbox mr-2" checked> Number Theory</label>
+                </div>
+            </div>
+
+            <!-- Difficulty -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold mb-2 text-slate-600">Difficulty</label>
+                <select id="filter-difficulty" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 bg-slate-50">
+                    <option value="All">All Difficulties</option>
+                    <option value="Easy">Easy (P1 / P4)</option>
+                    <option value="Medium">Medium (P2 / P5)</option>
+                    <option value="Hard">Hard (P3 / P6)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="w-full md:w-3/4" id="main-content">
+
+            <!-- Dashboard Header (Results & Pagination Size) -->
+            <div class="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800" id="result-count">Loading Problems...</h2>
+                    <p class="text-sm text-slate-500" id="result-showing">Please wait...</p>
+                </div>
+
+                <div class="mt-4 sm:mt-0 flex items-center space-x-2">
+                    <label class="text-sm font-semibold text-slate-600">Per page:</label>
+                    <select id="items-per-page" class="px-3 py-1.5 border rounded-md focus:ring-2 focus:ring-blue-500 bg-slate-50 text-sm outline-none cursor-pointer">
+                        <option value="15" selected>15</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Problem Container -->
+            <div id="problems-container" class="space-y-6"></div>
+
+            <!-- Pagination Controls (Bottom) -->
+            <div id="pagination-controls" class="mt-8 mb-12 flex justify-center items-center space-x-3">
+                <!-- Dynamically Injected -->
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Data & Pagination State
+        let rawDatabase = [];
+        let filteredProblems = [];
+        let currentPage = 1;
+        let itemsPerPage = 15;
+
+        // Styling Maps
+        const diffColors = {
+            "Easy": "bg-emerald-100 text-emerald-800 border-emerald-200",
+            "Medium": "bg-amber-100 text-amber-800 border-amber-200",
+            "Hard": "bg-rose-100 text-rose-800 border-rose-200"
+        };
+        const typeColors = {
+            "Algebra": "bg-blue-100 text-blue-800", "Combinatorics": "bg-purple-100 text-purple-800",
+            "Geometry": "bg-pink-100 text-pink-800", "Number Theory": "bg-orange-100 text-orange-800",
+            "Uncategorized": "bg-slate-100 text-slate-800"
+        };
+
+        // UI Elements
+        const container = document.getElementById('problems-container');
+        const countDisplay = document.getElementById('result-count');
+        const showingDisplay = document.getElementById('result-showing');
+        const paginationControls = document.getElementById('pagination-controls');
+        const itemsPerPageSelect = document.getElementById('items-per-page');
+
+        const searchInput = document.getElementById('searchTags');
+        const compInputs = document.querySelectorAll('#filter-comp input');
+        const typeInputs = document.querySelectorAll('#filter-type input');
+        const diffSelect = document.getElementById('filter-difficulty');
+
+        // ----- RENDER ENGINE -----
+
+        function updatePaginationUI() {
+            // Calculate slice bounds
+            const totalItems = filteredProblems.length;
+            const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+
+            // Safety check if current page exceeds total pages due to a filter change
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+
+            // Render the specific slice of problems
+            const pageSlice = filteredProblems.slice(startIndex, endIndex);
+            renderProblemsHTML(pageSlice);
+
+            // Update Headers
+            countDisplay.innerText = `${totalItems} Match${totalItems === 1 ? '' : 'es'} Found`;
+            if (totalItems === 0) {
+                showingDisplay.innerText = `Showing 0 items`;
+                paginationControls.innerHTML = '';
+            } else {
+                showingDisplay.innerText = `Showing ${startIndex + 1} - ${endIndex} of ${totalItems}`;
+                renderPaginationButtons(totalPages);
+            }
+        }
+
+        function renderProblemsHTML(problems) {
+            container.innerHTML = '';
+
+            if (problems.length === 0) {
+                container.innerHTML = `<div class="text-center p-8 bg-white rounded-xl shadow-sm"><p class="text-slate-500">No matches found for your filters.</p></div>`;
+                return;
+            }
+
+            problems.forEach(p => {
+                const tagsHtml = p.tags.map(tag => `<span class="inline-block border border-slate-300 text-slate-600 px-3 py-1 rounded-full text-xs font-medium mr-2 mb-2 bg-slate-50 shadow-sm">#${tag}</span>`).join('');
+                const typeStyle = typeColors[p.type] || typeColors["Uncategorized"];
+
+                container.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-600 transition hover:shadow-md">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                            <h3 class="text-xl font-bold text-slate-900">${p.competition} ${p.year} — Problem ${p.number}</h3>
+                            <span class="px-3 py-1 mt-2 md:mt-0 rounded text-xs font-bold uppercase border ${diffColors[p.difficulty]}">${p.difficulty}</span>
+                        </div>
+                        <div class="mb-5 flex flex-wrap items-center">
+                            <span class="px-3 py-1 rounded text-xs font-bold mr-3 mb-2 ${typeStyle} shadow-sm">${p.type}</span>
+                            ${tagsHtml}
+                        </div>
+                        <div class="prose max-w-none text-slate-800 mb-6 bg-slate-50 p-5 rounded-lg border border-slate-200 math-scroll text-lg leading-relaxed">
+                            ${p.statement}
+                        </div>
+                        <div class="bg-blue-50/50 border border-blue-100 p-5 rounded-lg mb-6">
+                            <h4 class="font-bold text-blue-900 text-sm mb-2 uppercase tracking-wide">💡 Strategy / Info</h4>
+                            <p class="text-sm text-blue-800 leading-relaxed">${p.strategy}</p>
+                        </div>
+                        <a href="${p.link}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded shadow transition inline-flex">
+                            Official Problem & Solution
+                        </a>
+                    </div>`;
+            });
+
+            // Re-trigger MathJax to typeset LaTeX whenever a new page loads
+            if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise();
+        }
+
+        function renderPaginationButtons(totalPages) {
+            // Disable conditions
+            const prevDisabled = currentPage === 1 ? 'disabled cursor-not-allowed opacity-50' : 'hover:bg-slate-100 hover:text-blue-600';
+            const nextDisabled = currentPage === totalPages ? 'disabled cursor-not-allowed opacity-50' : 'hover:bg-slate-100 hover:text-blue-600';
+
+            paginationControls.innerHTML = `
+                <button onclick="changePage(${currentPage - 1})" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg shadow-sm font-semibold transition ${prevDisabled}">
+                    &larr; Previous
+                </button>
+                <div class="px-4 py-2 bg-slate-100 border border-slate-200 text-slate-700 rounded-lg shadow-inner font-medium text-sm">
+                    Page <span class="font-bold text-blue-700">${currentPage}</span> of ${totalPages}
+                </div>
+                <button onclick="changePage(${currentPage + 1})" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg shadow-sm font-semibold transition ${nextDisabled}">
+                    Next &rarr;
+                </button>
+            `;
+        }
+
+        // Exposed to Window so the HTML buttons can call it
+        window.changePage = function(newPage) {
+            const totalPages = Math.ceil(filteredProblems.length / itemsPerPage);
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePaginationUI();
+                // Smooth scroll back to the top of the problem container
+                document.getElementById('main-content').scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        // ----- FILTERING LOGIC -----
+
+        function applyFilters() {
+            const activeComps = Array.from(compInputs).filter(i => i.checked).map(i => i.value);
+            const activeTypes = Array.from(typeInputs).filter(i => i.checked).map(i => i.value);
+            const diffFilter = diffSelect.value;
+            const search = searchInput.value.toLowerCase();
+
+            filteredProblems = rawDatabase.filter(p => {
+                if (!activeComps.includes(p.competition)) return false;
+                if (!activeTypes.includes(p.type)) return false;
+                if (diffFilter !== "All" && p.difficulty !== diffFilter) return false;
+                if (search) {
+                    return p.tags.some(t => t.toLowerCase().includes(search)) ||
+                           p.statement.toLowerCase().includes(search) ||
+                           p.strategy.toLowerCase().includes(search);
+                }
+                return true;
+            });
+
+            // Every time a filter changes, kick user back to page 1
+            currentPage = 1;
+            updatePaginationUI();
+        }
+
+        // Listeners for Filters & Items Per Page
+        [...compInputs, ...typeInputs, diffSelect].forEach(i => i.addEventListener('change', applyFilters));
+        searchInput.addEventListener('input', applyFilters);
+
+        itemsPerPageSelect.addEventListener('change', (e) => {
+            itemsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            updatePaginationUI();
+        });
+
+
+        // ----- INITIALIZATION -----
+
+        // Fallback Mock Data (17 problems to prove pagination works)
+        const mockDB = [
+            { id: 1, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Divisors"], statement: "Determine all composite integers $n > 1$...", strategy: "Evaluate small divisors.", link: "#" },
+            { id: 2, competition: "IMO", year: 2022, number: 1, type: "Algebra", difficulty: "Easy", tags: ["Functional Equations"], statement: "Let $\\mathbb{R}^+$ denote positive real numbers...", strategy: "Prove bijection.", link: "#" },
+            { id: 3, competition: "USAMO", year: 2020, number: 1, type: "Geometry", difficulty: "Easy", tags: ["Spiral Similarity"], statement: "Let $ABC$ be an acute triangle...", strategy: "Spiral similarity centered at X.", link: "#" },
+            { id: 4, competition: "USAJMO", year: 2021, number: 2, type: "Combinatorics", difficulty: "Easy", tags: ["PIE"], statement: "A window is divided into 16 panes...", strategy: "Use Principle of Inclusion Exclusion.", link: "#" },
+            { id: 5, competition: "IMO", year: 2019, number: 4, type: "Number Theory", difficulty: "Medium", tags: ["LTE"], statement: "Find all pairs $(k, n)$...", strategy: "Examine 2-adic valuation.", link: "#" },
+            { id: 6, competition: "IMO", year: 2011, number: 2, type: "Combinatorics", difficulty: "Medium", tags: ["Invariant"], statement: "Let $\\mathcal{S}$ be a finite set...", strategy: "Use Invariant Principle.", link: "#" },
+            { id: 7, competition: "IMO", year: 2001, number: 2, type: "Algebra", difficulty: "Medium", tags: ["Inequalities"], statement: "Let $a, b, c$ be positive real numbers...", strategy: "Apply Hölder's Inequality.", link: "#" },
+            { id: 8, competition: "USAMO", year: 2014, number: 1, type: "Algebra", difficulty: "Easy", tags: ["Polynomials"], statement: "Let $a, b, c, d$ be real numbers...", strategy: "Rewrite product.", link: "#" },
+            { id: 9, competition: "USAMO", year: 2003, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Induction"], statement: "Prove that for every positive integer...", strategy: "Proceed by induction.", link: "#" },
+            { id: 10, competition: "USAMO", year: 2001, number: 3, type: "Algebra", difficulty: "Hard", tags: ["AM-GM"], statement: "Let $a, b, c \\ge 0$...", strategy: "Trigonometric parametrization.", link: "#" },
+            { id: 11, competition: "USAJMO", year: 2013, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Modular"], statement: "Are there integers $a$ and $b$...", strategy: "Analyze modulo 9.", link: "#" },
+            // Duplicates to push past the 15-item barrier for testing Pagination
+            { id: 12, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test"], statement: "Testing Item 12", strategy: "...", link: "#" },
+            { id: 13, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test"], statement: "Testing Item 13", strategy: "...", link: "#" },
+            { id: 14, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test"], statement: "Testing Item 14", strategy: "...", link: "#" },
+            { id: 15, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test"], statement: "Testing Item 15", strategy: "...", link: "#" },
+            { id: 16, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test Page 2"], statement: "This item should appear on Page 2!", strategy: "...", link: "#" },
+            { id: 17, competition: "IMO", year: 2023, number: 1, type: "Number Theory", difficulty: "Easy", tags: ["Test Page 2"], statement: "This item should also be on Page 2!", strategy: "...", link: "#" }
+        ];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // First, try to fetch the scraped JSON file generated by Python
+            fetch('problems_output.json')
+                .then(response => {
+                    if (!response.ok) throw new Error("JSON not found locally");
+                    return response.json();
+                })
+                .then(data => {
+                    // Success! Use the 400+ scraped problems
+                    rawDatabase = data;
+                    applyFilters(); // Setup initial list and UI
+                })
+                .catch(error => {
+                    console.log("Could not find problems_output.json. Loading mock fallback data.");
+                    // Fallback to the hardcoded 17 items so you can see pagination working immediately
+                    rawDatabase = mockDB;
+                    applyFilters();
+                });
+        });
+    </script>
+</body>
+</html>
